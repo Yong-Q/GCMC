@@ -1,0 +1,89 @@
+units       real
+dimension       3
+boundary       p p p
+atom_style       full
+timestep        0.001
+bond_style harmonic
+angle_style harmonic
+dihedral_style charmm
+improper_style harmonic
+neighbor                                    3.0 bin
+neigh_modify                                every 1 delay 1 check yes
+box tilt large
+read_data       ABAVIJ.lmp# extra/atom/types 2 extra/bond/types   1 extra/angle/types  1 
+#info all
+molecule        CO2 CO2.mol    #add append offset 2  1 1 0 0
+variable xlo equal xlo
+variable xhi equal xhi
+variable ylo equal ylo
+variable yhi equal yhi
+variable zlo equal zlo
+variable zhi equal zhi
+lattice         sc 8
+region system block ${xlo} ${xhi} ${ylo} ${yhi} ${zlo} ${zhi}
+create_atoms  0  region system mol CO2 1234 units box  
+#create_atoms    0 random 2 34564 system mol H2 25367 overlap 1.33
+
+mass              1 15.999  # O
+mass              2 65.38  # Zn
+mass              3 12.011  # C
+mass              4 1.008  # H
+mass              5 14.007  # N
+mass              6 12.008    #C
+mass              7 15.008 
+
+pair_style      lj/cut 10.0
+
+pair_coeff 1 1 0.00845 3.541
+pair_coeff 2 2 0.00538 2.763
+pair_coeff 3 3 0.00455 3.851
+pair_coeff 4 4 0.00052 2.63
+pair_coeff 5 5 0.00793 3.697
+pair_coeff 6 6 0.00316 2.958
+pair_coeff 6 6 0.0179 2.625854
+pair_coeff 7 7 0.0106 2.8114421
+bond_coeff 1 46.121 1.17
+angle_coeff 1 2.0918 180
+pair_modify shift yes mix geometric
+
+thermo_modify lost ignore                
+minimize 1.0e-4 1.0e-6 1000 10000                
+
+group           MOFs type <> 1 5       
+group   CO2 type 6 7
+delete_atoms overlap 2 CO2 MOFs mol yes
+fix             1 MOFs setforce 0.0 0.0 0.0       
+#fix myrigid H2 rigid/small molecule mol H2
+velocity         all create 298 4928459                       
+#timestep 1
+thermo          1000
+
+thermo_style    custom step press temp epair emol   
+compute ctCO2 CO2 temp
+compute_modify ctCO2 dynamic yes
+fix mynvt2 CO2 nvt temp 300 300 0.1
+fix_modify mynvt2 temp ctCO2
+
+compute ctSiO MOFs temp
+fix mynvt3 MOFs nvt temp 300 300 0.1
+fix_modify mynvt3 temp ctSiO
+
+timestep 0.001
+thermo 100
+run 5000 
+
+variable tfac equal 5.0/3.0
+variable xlo equal xlo+0.1
+variable xhi equal xhi-0.1
+variable ylo equal ylo+0.1
+variable yhi equal yhi-0.1
+variable zlo equal zlo+0.1
+variable zhi equal zhi-0.1
+region system1 block ${xlo} ${xhi} ${ylo} ${yhi} ${zlo} ${zhi}
+
+fix fgcmc_CO2 CO2 gcmc 100 100 0 0 87787 300 -0.5 0.1 mol CO2 tfac_insert ${tfac} group CO2  pressure 10 #region system1
+
+
+run 5000
+
+write_data 1.data

@@ -1,0 +1,11 @@
+#!/bin/bash
+#PBS -N lammps
+#PBS -l walltime=999:00:00
+#PBS -l nodes=1:ppn=40
+#PBS -j oe
+cd $PBS_O_WORKDIR
+source /opt/modules/module.sh
+module load mpich/3.3.2
+module load lammps/3Mar20
+mpirun -np 40 lmp_mpi -in in.lammps
+
